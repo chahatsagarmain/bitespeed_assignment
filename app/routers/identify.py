@@ -1,0 +1,16 @@
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.orm import Session
+from ..database import get_db
+from ..controllers.contact_controller import identify_contact
+from ..schemas import IdentifyRequest, IdentifyResponse
+
+router = APIRouter()
+
+@router.post("/identify", response_model=IdentifyResponse)
+def identify(body: IdentifyRequest, db: Session = Depends(get_db)):
+    if not body.email and not body.phoneNumber:
+        raise HTTPException(status_code=400, detail="email or phoneNumber required")
+
+    result = identify_contact(db, body.email, body.phoneNumber)
+    return IdentifyResponse(contact=result)
+
