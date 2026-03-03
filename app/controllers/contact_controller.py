@@ -18,6 +18,20 @@ def identify_contact(db: Session, email: str | None, phone: str | None):
     )
     existing = query.order_by(Contact.createdAt).all()
 
+    # if the only records found are secondaries, also load their primaries
+    if existing:
+        secondary_links = [c.linkedId for c in existing if c.linkPrecedence == "secondary" and c.linkedId]
+        if secondary_links:
+            prims = (
+                db.query(Contact)
+                .filter(Contact.id.in_(secondary_links))
+                .order_by(Contact.createdAt)
+                .all()
+            )
+            for p in prims:
+                if all(p.id != e.id for e in existing):
+                    existing.append(p)
+
     if not existing:
         new = Contact(
             email=email,
@@ -88,7 +102,7 @@ def identify_contact(db: Session, email: str | None, phone: str | None):
     if primary.phoneNumber:
         phone_numbers.append(primary.phoneNumber)
 
-    for cid, c in all_contacts.items():
+    for _ , c in all_contacts.items():
         if c.id == primary.id:
             continue
         if c.email and c.email not in emails:
